@@ -83,7 +83,7 @@ async function guardarCliente() {
         bootstrap.Modal.getOrCreateInstance(document.querySelector('#formulario')).hide();
     } catch (error) {
         console.error('No se pudo cargar el menú:', error);
-        mostrarAlerta('No se pudo cargar el menú. Verifica que json-server esté activo en el puerto 3000.');
+        mostrarAlerta('No se pudo conectar con la API. Inicia la aplicación con "npm run dev" y ábrela en http://localhost:3000/.');
     } finally {
         btnGuardarCliente.disabled = false;
     }

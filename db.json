@@ -124,6 +124,40 @@
   "ordenes": [
     {
       "id": "fb87SW7yh74"
+    },
+    {
+      "id": "fa09a39e-2e66-4fed-9ab5-0702d18e7eb9",
+      "mesa": 1,
+      "hora": "16:39",
+      "pedido": [
+        {
+          "id": "1",
+          "nombre": "pizza pequena",
+          "categoria": 1,
+          "precio": 10,
+          "cantidad": 1,
+          "subtotal": 10
+        },
+        {
+          "id": "14",
+          "nombre": "cafe",
+          "categoria": 5,
+          "precio": 2,
+          "cantidad": 1,
+          "subtotal": 2
+        },
+        {
+          "id": "19",
+          "nombre": "banana split",
+          "categoria": 2,
+          "precio": 4,
+          "cantidad": 1,
+          "subtotal": 4
+        }
+      ],
+      "total": 16,
+      "estado": "pendiente",
+      "creadaEn": "2026-11-15T18:39:53.784Z"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
