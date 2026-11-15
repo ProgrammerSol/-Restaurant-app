@@ -6,6 +6,7 @@ const seccionResumen = document.querySelector('#resumen');
 const contenidoResumen = document.querySelector('#resumen .contenido');
 const btnGuardarOrden = document.querySelector('#guardar-orden');
 const mensajeOrden = document.querySelector('#mensaje-orden');
+const claveOrdenes = 'restaurant-app-ordenes';
 
 const cliente = {
     mesa: '',
@@ -63,27 +64,27 @@ async function guardarCliente() {
     mostrarAlerta('Cargando el menú...', 'info');
 
     try {
-        const respuesta = await fetch('/api/menu');
+        const respuesta = await fetch('db.json');
         if (!respuesta.ok) {
-            throw new Error(`La API respondió con estado ${respuesta.status}.`);
+            throw new Error(`No se pudo cargar db.json: estado ${respuesta.status}.`);
         }
 
-        const menu = await respuesta.json();
-        if (!Array.isArray(menu)) {
-            throw new Error('La respuesta de la API no contiene una lista de productos.');
+        const datos = await respuesta.json();
+        if (!Array.isArray(datos.menu)) {
+            throw new Error('db.json no contiene una lista de productos.');
         }
 
         cliente.pedido = [];
         mensajeOrden.textContent = '';
         mensajeOrden.className = 'mt-3';
-        mostrarMenu(menu);
+        mostrarMenu(datos.menu);
         mostrarSecciones();
         mostrarResumen();
         limpiarAlerta();
         bootstrap.Modal.getOrCreateInstance(document.querySelector('#formulario')).hide();
     } catch (error) {
         console.error('No se pudo cargar el menú:', error);
-        mostrarAlerta('No se pudo conectar con la API. Inicia la aplicación con "npm run dev" y ábrela en http://localhost:3000/.');
+        mostrarAlerta('No se pudo cargar el menú. Verifica que db.json esté incluido en el sitio publicado.');
     } finally {
         btnGuardarCliente.disabled = false;
     }
@@ -217,7 +218,7 @@ function mostrarResumen() {
     contenidoResumen.appendChild(totalPedido);
 }
 
-async function guardarOrden() {
+function guardarOrden() {
     if (cliente.pedido.length === 0 || !cliente.mesa || !cliente.hora) {
         return;
     }
@@ -227,20 +228,48 @@ async function guardarOrden() {
     mensajeOrden.className = 'mt-3';
 
     try {
-        const respuesta = await fetch('/api/ordenes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mesa: cliente.mesa,
-                hora: cliente.hora,
-                pedido: cliente.pedido.map(({ id, cantidad }) => ({ id, cantidad }))
-            })
-        });
-
-        const resultado = await respuesta.json();
-        if (!respuesta.ok) {
-            throw new Error(resultado.error || `La API respondió con estado ${respuesta.status}.`);
+        const mesa = Number(cliente.mesa);
+        if (!Number.isInteger(mesa) || mesa < 1 || mesa > 8) {
+            throw new Error('La mesa debe ser un número entero entre 1 y 8.');
         }
+
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(cliente.hora)) {
+            throw new Error('La hora no tiene un formato válido.');
+        }
+
+        const pedido = cliente.pedido.map(producto => {
+            const cantidad = Number(producto.cantidad);
+            const precio = Number(producto.precio);
+            if (!Number.isSafeInteger(cantidad) || cantidad < 1 || !Number.isFinite(precio) || precio < 0) {
+                throw new Error('El pedido contiene un producto o una cantidad inválidos.');
+            }
+
+            return {
+                id: producto.id,
+                nombre: producto.nombre,
+                categoria: producto.categoria,
+                precio,
+                cantidad,
+                subtotal: Number((precio * cantidad).toFixed(2))
+            };
+        });
+        const total = Number(pedido.reduce((suma, producto) => suma + producto.subtotal, 0).toFixed(2));
+        const orden = {
+            id: crypto.randomUUID(),
+            mesa,
+            hora: cliente.hora,
+            pedido,
+            total,
+            estado: 'pendiente',
+            creadaEn: new Date().toISOString()
+        };
+        const ordenesGuardadas = JSON.parse(localStorage.getItem(claveOrdenes) || '[]');
+        if (!Array.isArray(ordenesGuardadas)) {
+            throw new Error('No se pudieron leer las órdenes guardadas en este navegador.');
+        }
+
+        ordenesGuardadas.push(orden);
+        localStorage.setItem(claveOrdenes, JSON.stringify(ordenesGuardadas));
 
         cliente.guardada = true;
         document.querySelectorAll('#menu input[type="number"]').forEach(input => {
@@ -248,7 +277,7 @@ async function guardarOrden() {
         });
         mostrarResumen();
         mensajeOrden.className = 'alert alert-success mt-3';
-        mensajeOrden.textContent = `Orden ${resultado.id} guardada. Total: $${resultado.total}.`;
+        mensajeOrden.textContent = `Orden ${orden.id} guardada en este navegador. Total: $${orden.total}.`;
     } catch (error) {
         console.error('No se pudo guardar la orden:', error);
         mensajeOrden.className = 'alert alert-danger mt-3';

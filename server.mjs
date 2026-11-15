@@ -34,6 +34,10 @@ app.get('/', (req, res) => {
     res.sendFile(resolve(root, 'index.html'));
 });
 
+app.get('/db.json', (req, res) => {
+    res.sendFile(databasePath);
+});
+
 app.get('/api/menu', (req, res) => {
     res.json(db.data.menu);
 });
